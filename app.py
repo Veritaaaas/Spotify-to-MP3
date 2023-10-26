@@ -2,11 +2,12 @@
 import spotipy
 import time
 import os
+import zipfile
 
 from spotipy.oauth2 import SpotifyOAuth
 from youtubesearchpython import VideosSearch
-from pytube import YouTube
-from flask import Flask, request, url_for, session, redirect, render_template
+from youtube_dl import YoutubeDL
+from flask import Flask, request, url_for, session, redirect, render_template, send_from_directory
 
 #creating the flask app
 app = Flask(__name__)
@@ -15,6 +16,9 @@ app = Flask(__name__)
 app.config['SESSION_COOKIE_NAME'] = "Spotify Cookies"
 app.secret_key = "sadasfjaoigsj31231f&##dfd"
 TOKEN_INFO = "token_info"
+
+if not os.path.exists('downloads'):
+        os.makedirs('downloads')
 
 #route for bringing the users to the index page
 @app.route('/')
@@ -96,18 +100,18 @@ def get_songs():
         return "No playlists info available"
     
     #declaring variable to access the user's spotify data using spotipy module
-    sp = spotipy.Spotify(auth=token_info['access_token'])
-    
-    #checks if the user selected a playlist
-    if not request.form.getlist("playlists[]"):
-        return ("Must select one playlist")
-    
-    #declaring the necessary variables
-    songs = []
-    tracks = []
-    video_names = []
-    video_links = []
-    
+    sp = spotipy.Spotify(auth=token_info['access_token'])   
+        
+    #checks if the user selected a playlist 
+    if not request.form.getlist("playlists[]"): 
+        return ("Must select one playlist") 
+        
+    #declaring the necessary variables  
+    songs = []  
+    tracks = [] 
+    video_names = []    
+    video_links = []    
+        
     #iterates through the user's current playlist
     for playlist in request.form.getlist("playlists[]"):
         
@@ -135,17 +139,30 @@ def get_songs():
     #saves all the youtube links of the selected songs
     for i in range(len(video_names)):
         video_links.append(search_youtube(video_names[i]))
+        
     
-    #declare the download path where the mp3 will be saved
-    downloads_path = os.path.join(os.path.expanduser("~"), "Downloads")
+    #create a code that will save all of my downloaded songs into a zip file
+    downloads_folder = os.path.join(os.path.dirname(__file__), 'downloads')
+    os.makedirs(downloads_folder, exist_ok=True)
+    zip_file_path = os.path.join(downloads_folder, 'playlist.zip')
+    with zipfile.ZipFile(zip_file_path, 'w') as zip_file:
+        #write the full code of downloading the songs
+        for video_link in video_links:
+            with YoutubeDL({'format': 'bestaudio'}) as ydl:
+                info = ydl.extract_info(video_link, download=False)
+                title = info.get('title', None)
+                if title:
+                    filename = ydl.prepare_filename(info)
+                    ydl.download([video_link])
+                    zip_file.write(filename)
     
-    #downloads each youtube links into mp3
-    for link in video_links:
-        yt = YouTube(link)
-        audio_stream = yt.streams.filter(only_audio = True).first()
-        audio_stream.download(output_path = downloads_path)
+    #delete all the mp4 files in the downloads folder
+    for file in os.listdir('downloads/'):
+        if file.endswith('.mp4'):
+            os.remove(os.path.join('downloads/', file))
     
-    return ("Success")
+    #return the zip file to the user
+    return send_from_directory('downloads/', 'playlist.zip', as_attachment=True)
     
 #used for getting the user's spotify token
 def get_token():
