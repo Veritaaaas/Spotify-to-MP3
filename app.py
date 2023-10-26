@@ -6,7 +6,7 @@ import zipfile
 
 from spotipy.oauth2 import SpotifyOAuth
 from youtubesearchpython import VideosSearch
-from youtube_dl import YoutubeDL
+from pytube import YouTube
 from flask import Flask, request, url_for, session, redirect, render_template, send_from_directory
 
 #creating the flask app
@@ -148,13 +148,9 @@ def get_songs():
     with zipfile.ZipFile(zip_file_path, 'w') as zip_file:
         #write the full code of downloading the songs
         for video_link in video_links:
-            with YoutubeDL({'format': 'bestaudio'}) as ydl:
-                info = ydl.extract_info(video_link, download=False)
-                title = info.get('title', None)
-                if title:
-                    filename = ydl.prepare_filename(info)
-                    ydl.download([video_link])
-                    zip_file.write(filename)
+            yt = YouTube(video_link)
+            yt.streams.filter(only_audio=True).first().download('downloads/')
+            zip_file.write(f"downloads/{yt.title}.mp4")
     
     #delete all the mp4 files in the downloads folder
     for file in os.listdir('downloads/'):
