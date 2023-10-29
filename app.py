@@ -6,10 +6,8 @@ import zipfile
 import glob
 import unicodedata
 import re  
-import shutil
 
 from spotipy.oauth2 import SpotifyOAuth
-from slugify import slugify
 from youtubesearchpython import VideosSearch
 from pytube import YouTube
 from flask import Flask, request, url_for, session, redirect, render_template, send_from_directory
@@ -150,9 +148,7 @@ def get_songs():
     #downloads all the mp4 files of the selected songs
     filenames = []
     for link in video_links:
-        filename = download_video(link)
-        if filename:
-            filenames.append(filename)
+        filenames.append(download_video(link))
 
     #creates a downloads folder to save the mp4 files
     downloads_folder = os.path.join(os.path.dirname(__file__), 'downloads')
@@ -166,9 +162,9 @@ def get_songs():
                 zip.write(file, os.path.basename(file))
     
     # delete all the mp4 files in the downloads folder
-    for file_path in glob.glob(os.path.join(downloads_folder, '*.mp4')):
+    for file_path in glob.glob(os.path.join(downloads_folder, '*.mp3')):
         os.remove(file_path)
-
+            
     # return the zip file to the user
     return send_from_directory('downloads/', 'playlist.zip', as_attachment=True)
 
@@ -219,22 +215,12 @@ def slugify(text):
 
 # function to download and convert a video
 def download_video(video_link):
-    try:
-        yt = YouTube(video_link)
-        stream = yt.streams.filter(only_audio=True).first()
-        stream.download('downloads/')
-        title = slugify(yt.title)
-        title = title.replace("/", '').replace("-", ' ')
-        filename = stream.default_filename
-        new_filename = f"downloads/{title}.mp4"
-        if os.path.exists(new_filename):
-            os.remove(new_filename)
-        os.rename(f"downloads/{filename}", new_filename)
-        return new_filename
-    
-    except:
-        return None
-
+    yt = YouTube(video_link)
+    stream = yt.streams.filter(only_audio=True).first()
+    filename = slugify(yt.title) + '.mp3'
+    filename = filename.replace('/', '')
+    stream.download(output_path='downloads/', filename=filename)
+    return f'downloads/{filename}'
 
 if __name__ == "__main__":
     app.run()
