@@ -17,7 +17,7 @@ app = Flask(__name__)
 
 #used for configuring the cookies of the user
 app.config['SESSION_COOKIE_NAME'] = "Spotify Cookies"
-app.secret_key = "sadasfjaoigsj31231f&##dfd"
+app.secret_key = "INSER RANDOM STRINGS HERE"
 TOKEN_INFO = "token_info"
 
 if not os.path.exists('downloads'):
