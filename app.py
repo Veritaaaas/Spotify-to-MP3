@@ -20,9 +20,6 @@ app.config['SESSION_COOKIE_NAME'] = "Spotify Cookies"
 app.secret_key = "INSER RANDOM STRINGS HERE"
 TOKEN_INFO = "token_info"
 
-if not os.path.exists('downloads'):
-        os.makedirs('downloads')
-
 #route for bringing the users to the index page
 @app.route('/')
 def index():
@@ -114,6 +111,7 @@ def get_songs():
     songs = []
     video_names = []
     video_links = []
+    filenames = []
 
     #iterates through the user's current playlist
     for playlist in selected_playlists:
@@ -146,22 +144,21 @@ def get_songs():
             video_links.append(video_link)
 
     #downloads all the mp4 files of the selected songs
-    filenames = []
     for link in video_links:
         filenames.append(download_video(link))
 
-    #creates a downloads folder to save the mp4 files
+    #creates a downloads folder to save the mp3 files
     downloads_folder = os.path.join(os.path.dirname(__file__), 'downloads')
     os.makedirs(downloads_folder, exist_ok=True)
     zip_file_path = os.path.join(downloads_folder, 'playlist.zip')
 
-    #save the mp4 files into a zip file
+    #save the mp3 files into a zip file
     with zipfile.ZipFile(zip_file_path, 'w') as zip:
         for file in filenames:
             if file:
                 zip.write(file, os.path.basename(file))
     
-    # delete all the mp4 files in the downloads folder
+    # delete all the mp3 files in the downloads folder
     for file_path in glob.glob(os.path.join(downloads_folder, '*.mp3')):
         os.remove(file_path)
             
@@ -207,13 +204,14 @@ def search_youtube(video_name):
     else:
         return None
 
+#used for renaming the files into more url friendly state
 def slugify(text):
     text = str(text)
     text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('ascii')
     text = re.sub(r'\([^)]*\)', '', text) 
     return re.sub(r'[-\s]+', '-', text).strip('-')
 
-# function to download and convert a video
+#download and converts the video into mp3
 def download_video(video_link):
     yt = YouTube(video_link)
     stream = yt.streams.filter(only_audio=True).first()
@@ -221,6 +219,7 @@ def download_video(video_link):
     filename = filename.replace('/', '')
     stream.download(output_path='downloads/', filename=filename)
     return f'downloads/{filename}'
+
 
 if __name__ == "__main__":
     app.run()
